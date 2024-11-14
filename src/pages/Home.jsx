@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
+import { FaToggleOn, FaToggleOff } from 'react-icons/fa'
 
 const Home = () => {
 	const videoRef = useRef()
 	const [streaming, setStreaming] = useState(false)
-	// const [pc, setPc] = useState(null)
+	const [useWatermark, setUseWatermark] = useState(false)
 	let pc = null
 
 	// Establish WebRTC peer connection and handle the offer/answer exchange
@@ -16,7 +17,13 @@ const Home = () => {
 				if (videoRef.current) {
 					videoRef.current.srcObject = null
 				}
-				console.log('Stream stopped')
+
+				const response = await fetch('/api/close', {
+					method: 'POST',
+				})
+
+				const data = await response.json()
+				console.log(data.message)
 				return
 			}
 
@@ -59,8 +66,12 @@ const Home = () => {
 			await pc.setLocalDescription(offer)
 
 			console.log('Created offer')
+			let url = '/api/offer'
+			if (useWatermark) {
+				url = '/api/offer?watermark=True'
+			}
 			// Get the offer from the server
-			const response = await fetch('/api/offer', {
+			const response = await fetch(url, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -83,9 +94,11 @@ const Home = () => {
 	}
 
 	return (
-		<div>
-			<h1 className='text-3xl font-bold'>WebRTC Video Stream</h1>
-			<p className='text-lg text-gray-600'>
+		<div className='w-full max-w-4xl mx-auto py-8 flex flex-col items-center'>
+			<h1 className='text-3xl font-bold text-gray-200 text-center mb-2'>
+				WebRTC Video Stream
+			</h1>
+			<p className='text-lg text-gray-300 text-center mb-4'>
 				Click the button below to start streaming video.
 			</p>
 			{!streaming ? (
@@ -101,13 +114,41 @@ const Home = () => {
 					Stop Video Stream
 				</button>
 			)}
-			<video
-				ref={videoRef}
-				autoPlay
-				playsInline
-				muted
-				className='mt-4 w-full h-auto border-2 border-gray-200'
-			/>
+			<div className='relative w-full mt-4'>
+				<div className='flex gap-4 items-center mb-2'>
+					{useWatermark ? (
+						<FaToggleOn
+							className={`text-green-500 text-3xl ${
+								streaming ? 'cursor-not-allowed' : 'cursor-pointer'
+							}`}
+							onClick={() => {
+								if (!streaming) {
+									setUseWatermark(!useWatermark)
+								}
+							}}
+						/>
+					) : (
+						<FaToggleOff
+							className={`text-gray-300 text-3xl ${
+								streaming ? 'cursor-not-allowed' : 'cursor-pointer'
+							}`}
+							onClick={() => {
+								if (!streaming) {
+									setUseWatermark(!useWatermark)
+								}
+							}}
+						/>
+					)}
+					<p className='text-md text-gray-300'>Use Watermark</p>
+				</div>
+				<video
+					ref={videoRef}
+					autoPlay
+					playsInline
+					muted
+					className='w-full h-auto border-2 border-gray-200'
+				/>
+			</div>
 			{streaming && <p className='text-lg text-green-600'>Streaming...</p>}
 		</div>
 	)
